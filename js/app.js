@@ -87,9 +87,9 @@
     requestAnimationFrame(renderLoop);
   }
 
-  // パターン変更時のハンドラ：譜面のみ再描画（グリッドアラインは動かさない）
-  // requestAlign() をここで呼ぶと、VexFlow のフォーマッタが音符幅に応じて
-  // X 座標を微妙に変えるたびグリッドが揺れるため、init / resize 時のみ実行する。
+  // パターン変更時のハンドラ：譜面再描画 + アライン更新。
+  // ドラムとメロディを別 Formatter で整形しているため、
+  // メロディの音価変更でドラム X が動くことはなく、グリッドの揺れは起きない。
   function onGridToggle() {
     if (isMobile) {
       const wrap = document.getElementById('score-wrap');
@@ -104,6 +104,7 @@
       });
     } else {
       UIScore.refresh(currentPattern, swing);
+      requestAlign();
     }
   }
 
