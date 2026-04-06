@@ -198,15 +198,21 @@
     if (!scoreEl) return;
     const svg = scoreEl.querySelector('svg');
     if (!svg) return;
-    const containerWidth = scoreEl.parentElement.clientWidth;
+    // score-wrap の実幅をコンテナ幅として使う
+    const wrapEl = scoreEl.parentElement;
+    const containerWidth = wrapEl.clientWidth;
     if (containerWidth <= 0) return;
     const svgWidth = parseFloat(svg.getAttribute('width')) || 560;
     const svgHeight = parseFloat(svg.getAttribute('height')) || 300;
     const scale = Math.min(1, containerWidth / svgWidth);
+    // transform はレイアウトを変えないので、コンテナサイズも明示的に制限
     svg.style.transformOrigin = 'top left';
     svg.style.transform = `scale(${scale})`;
+    svg.style.display = 'block';
+    scoreEl.style.width = `${containerWidth}px`;
     scoreEl.style.height = `${svgHeight * scale}px`;
     scoreEl.style.minHeight = 'auto';
+    scoreEl.style.overflow = 'hidden';
   }
 
   // --- 再生制御 ------------------------------------------------------
