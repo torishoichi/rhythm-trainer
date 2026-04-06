@@ -164,6 +164,7 @@ const UIGrid = (() => {
         clearC4RunContaining(currentPattern, step);
         syncVisuals(currentPattern);
         notifyChange(track, step);
+        haptic();
         dragState = null;
       } else {
         const snapshot = currentPattern.c4.slice();
@@ -182,6 +183,7 @@ const UIGrid = (() => {
       dragState = { track, paintValue: newVal };
       syncVisuals(currentPattern);
       notifyChange(track, step);
+      haptic();
     }
   }
 
@@ -359,5 +361,88 @@ const UIGrid = (() => {
     }
   }
 
-  return { render, highlightStep, refresh, setReadOnly, applyStepFractions, alignToScore, updateDynamicPositions };
+  // --- モバイル: 行スクロール同期 -----------------------------------------
+  let scrollSyncing = false;
+
+  function setupScrollSync() {
+    const trackKeys = Object.keys(rowAreas);
+    for (const track of trackKeys) {
+      if (rowAreas[track].dataset.scrollSync) continue;
+      rowAreas[track].dataset.scrollSync = '1';
+      rowAreas[track].addEventListener('scroll', function () {
+        if (scrollSyncing) return;
+        scrollSyncing = true;
+        const sl = this.scrollLeft;
+        for (const t of trackKeys) {
+          if (rowAreas[t] !== this) rowAreas[t].scrollLeft = sl;
+        }
+        requestAnimationFrame(() => { scrollSyncing = false; });
+        updateBeatIndicator(sl);
+      }, { passive: true });
+    }
+  }
+
+  // --- モバイル: ビートインジケーター更新 -----------------------------------
+  let beatDotEls = [];
+
+  function buildBeatIndicator(indicatorEl) {
+    if (!indicatorEl) return;
+    indicatorEl.innerHTML = '';
+    beatDotEls = [];
+    for (let i = 0; i < STEPS; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'beat-dot';
+      if (i % STEPS_PER_BEAT === 0) dot.classList.add('beat-head');
+      dot.addEventListener('click', () => scrollToBeat(i));
+      indicatorEl.appendChild(dot);
+      beatDotEls.push(dot);
+    }
+    updateBeatIndicator(0);
+  }
+
+  function scrollToBeat(step) {
+    const refTrack = Object.keys(rowAreas)[0];
+    if (!refTrack) return;
+    const cells = rowAreas[refTrack];
+    const cell = cellEls.find(c => c.track === refTrack && c.step === step);
+    if (cell) {
+      const cellRect = cell.el.getBoundingClientRect();
+      const areaRect = cells.getBoundingClientRect();
+      const scrollTarget = cells.scrollLeft + (cellRect.left - areaRect.left);
+      cells.scrollTo({ left: scrollTarget, behavior: 'smooth' });
+    }
+  }
+
+  function updateBeatIndicator(scrollLeft) {
+    if (!beatDotEls.length) return;
+    const refTrack = Object.keys(rowAreas)[0];
+    if (!refTrack) return;
+    const cells = rowAreas[refTrack];
+    const areaWidth = cells.clientWidth;
+    const scrollWidth = cells.scrollWidth;
+    if (scrollWidth <= areaWidth) {
+      // All visible
+      beatDotEls.forEach(d => d.classList.add('visible'));
+      return;
+    }
+    const viewStart = scrollLeft / scrollWidth;
+    const viewEnd = (scrollLeft + areaWidth) / scrollWidth;
+    for (let i = 0; i < STEPS; i++) {
+      const stepStart = i / STEPS;
+      const stepEnd = (i + 1) / STEPS;
+      const visible = stepStart >= viewStart - 0.01 && stepEnd <= viewEnd + 0.01;
+      beatDotEls[i].classList.toggle('visible', visible);
+    }
+  }
+
+  // --- 触覚フィードバック -------------------------------------------------
+  function haptic() {
+    if ('vibrate' in navigator) navigator.vibrate(10);
+  }
+
+  return {
+    render, highlightStep, refresh, setReadOnly,
+    applyStepFractions, alignToScore, updateDynamicPositions,
+    setupScrollSync, buildBeatIndicator,
+  };
 })();

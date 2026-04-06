@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>リズム訓練</title>
 <link rel="stylesheet" href="./styles.css">
 <script src="https://cdn.jsdelivr.net/npm/vexflow@5.0.0/build/cjs/vexflow.js"></script>
@@ -12,7 +12,8 @@
   <h1>リズム訓練</h1>
 </header>
 
-<section class="transport">
+<!-- デスクトップ用トランスポート -->
+<section class="transport transport-desktop">
   <button id="play-btn" class="play-btn">▶ Play</button>
   <button id="clear-btn" class="ghost-btn">Clear</button>
   <label class="bpm-label">
@@ -34,13 +35,55 @@
   </label>
 </section>
 
+<!-- モバイル用固定ボトムバー -->
+<nav class="transport transport-mobile">
+  <button id="mob-bpm-badge" class="mob-bpm-badge">♩=<span id="mob-bpm-val">100</span></button>
+  <button id="mob-play-btn" class="mob-play-btn">▶</button>
+  <button id="mob-settings-btn" class="mob-settings-btn">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+      <circle cx="10" cy="10" r="3"/><path d="M10 1v3M10 16v3M1 10h3M16 10h3M3.5 3.5l2 2M14.5 14.5l2 2M3.5 16.5l2-2M14.5 5.5l2-2"/>
+    </svg>
+  </button>
+</nav>
+
+<!-- ボトムシート（BPM/Swing/Clear） -->
+<div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
+<div id="bottom-sheet" class="bottom-sheet" hidden>
+  <div class="sheet-handle"></div>
+  <div class="sheet-content">
+    <label class="sheet-row">
+      <span class="sheet-label">BPM</span>
+      <input id="sheet-bpm-slider" type="range" min="40" max="240" step="1" value="100">
+      <span id="sheet-bpm-value" class="sheet-val">100</span>
+    </label>
+    <label class="sheet-row">
+      <span class="sheet-label">スイング</span>
+      <select id="sheet-swing-type">
+        <option value="straight">オフ</option>
+        <option value="eighth">8分</option>
+        <option value="sixteenth">16分</option>
+      </select>
+    </label>
+    <label id="sheet-swing-ratio-wrap" class="sheet-row" hidden>
+      <span class="sheet-label">比率</span>
+      <input id="sheet-swing-ratio" type="range" min="50" max="75" step="1" value="66">
+      <span id="sheet-swing-ratio-value" class="sheet-val">66%</span>
+    </label>
+    <button id="sheet-clear-btn" class="ghost-btn sheet-clear-btn">パターンをクリア</button>
+  </div>
+</div>
+
 <main>
-  <section class="panel">
-    <h2>DTM</h2>
+  <section class="panel panel-grid">
+    <div class="panel-header">
+      <h2>DTM</h2>
+      <button id="score-toggle" class="score-toggle" hidden>♫ 譜面</button>
+    </div>
+    <div id="beat-indicator" class="beat-indicator" hidden></div>
     <div id="grid-wrap" class="grid-wrap"></div>
   </section>
 
-  <section class="panel">
+  <section id="score-panel" class="panel panel-score">
     <h2>リズム譜<span id="swing-indicator" class="swing-indicator"></span></h2>
     <div id="score-wrap" class="score-wrap">
       <div id="score"></div>
