@@ -7,7 +7,7 @@
   let swing = { type: 'straight', ratio: 0.5 };
 
   // --- モバイル検出 ---------------------------------------------------
-  const mqMobile = window.matchMedia('(max-width: 480px)');
+  const mqMobile = window.matchMedia('(max-width: 640px)');
   const mqLandscape = window.matchMedia('(max-width: 900px) and (orientation: landscape)');
   let isMobile = mqMobile.matches || mqLandscape.matches;
   mqMobile.addEventListener('change', onMobileChange);
@@ -17,9 +17,11 @@
     isMobile = mqMobile.matches || mqLandscape.matches;
     if (isMobile) {
       setupMobileUI();
+      resetGridAlignment();
+    } else {
+      UIScore.refresh(currentPattern, swing);
+      requestAlign();
     }
-    UIScore.refresh(currentPattern, swing);
-    requestAlign();
   }
 
   // --- DOM 参照（デスクトップ） -----------------------------------------
@@ -69,17 +71,29 @@
     DrumAudio.setBpm(Number($bpmSlider.value));
     $bpmValue.textContent = $bpmSlider.value;
     applySwing();
-    requestAlign();
+
+    if (isMobile) {
+      // モバイル：グリッドの alignToScore を適用しない
+      setupMobileUI();
+      resetGridAlignment();
+    } else {
+      requestAlign();
+    }
 
     wireEvents();
     window.addEventListener('resize', debounce(() => {
       isMobile = mqMobile.matches || mqLandscape.matches;
-      UIScore.refresh(currentPattern, swing);
-      requestAlign();
-      if (isMobile && scoreVisible) applyScoreScale();
+      if (isMobile) {
+        resetGridAlignment();
+        if (scoreVisible) {
+          UIScore.refresh(currentPattern, swing);
+          applyScoreScale();
+        }
+      } else {
+        UIScore.refresh(currentPattern, swing);
+        requestAlign();
+      }
     }, 120));
-
-    if (isMobile) setupMobileUI();
 
     requestAnimationFrame(renderLoop);
   }
@@ -92,8 +106,10 @@
 
   // パターン変更時のハンドラ：譜面も再描画してアライン再計算
   function onGridToggle() {
-    UIScore.refresh(currentPattern, swing);
-    requestAlign();
+    if (!isMobile || scoreVisible) {
+      UIScore.refresh(currentPattern, swing);
+    }
+    if (!isMobile) requestAlign();
   }
 
   // --- イベント配線 -------------------------------------------------
@@ -160,10 +176,14 @@
     editPattern = createEmptyPattern();
     currentPattern = editPattern;
     UIGrid.render($gridWrap, currentPattern, { onToggle: onGridToggle });
-    UIScore.refresh(currentPattern, swing);
     applySwing();
-    requestAlign();
-    if (isMobile) setupMobileUI();
+    if (isMobile) {
+      setupMobileUI();
+      resetGridAlignment();
+    } else {
+      UIScore.refresh(currentPattern, swing);
+      requestAlign();
+    }
   }
 
   // --- モバイルコントロール同期 -----------------------------------------

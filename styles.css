@@ -436,11 +436,12 @@ main {
 /* ============================================================
    RESPONSIVE: Phone portrait (max-width: 480px)
    ============================================================ */
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   html, body {
     height: 100dvh;
     height: 100vh; /* fallback */
     overflow: hidden;
+    overflow-x: hidden;
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
   }
@@ -448,6 +449,7 @@ main {
     display: flex;
     flex-direction: column;
     touch-action: manipulation;
+    max-width: 100vw;
   }
 
   /* Header — compact */
@@ -522,6 +524,10 @@ main {
     height: 40px;
     gap: 2px;
     grid-template-columns: repeat(16, minmax(34px, 1fr));
+    /* モバイルではデスクトップの alignToScore 上書きを打ち消す */
+    margin-left: 0 !important;
+    width: auto !important;
+    flex: 1 !important;
   }
   .track-cells::-webkit-scrollbar { display: none; }
 
@@ -535,6 +541,10 @@ main {
     min-height: auto;
   }
   .panel-score.show .score-wrap {
+    overflow: hidden;
+  }
+  /* 非表示のスコアヘッドがはみ出さないよう */
+  .score-wrap {
     overflow: hidden;
   }
 
