@@ -219,10 +219,14 @@ const UIScore = (() => {
   }
 
   function makeNote(StaveNote, Dot, duration, dots, isRest) {
-    return new StaveNote({
-      keys: ['b/4'],
-      duration: duration + 'd'.repeat(dots) + (isRest ? 'r' : ''),
-    });
+    const dur = duration + 'd'.repeat(dots) + (isRest ? 'r' : '');
+    const n = new StaveNote({ keys: ['b/4'], duration: dur });
+    // VexFlow 5: 'd' suffix はティック数を正しく設定するが、
+    // ドットの視覚表示には明示的な Dot モディファイアが必要
+    for (let d = 0; d < dots; d++) {
+      n.addModifier(new Dot(), 0);
+    }
+    return n;
   }
 
   // len（16 分単位）を標準音価に分割する（greedy）

@@ -344,12 +344,16 @@ const UIGrid = (() => {
       }
     }
 
-    // 拍区切り線を配置（ステップ 3-4, 7-8, 11-12 の中点）
+    // 拍区切り線を配置（セル間ギャップの中央。スイング時もずれない）
     const beatEdges = [4, 8, 12];
     for (let i = 0; i < beatEdges.length; i++) {
       const s = beatEdges[i];
-      if (cachedCellCenterXs[s - 1] != null && cachedCellCenterXs[s] != null) {
-        const x = (cachedCellCenterXs[s - 1] + cachedCellCenterXs[s]) / 2;
+      const prev = cellEls.find(c => c.track === refTrack && c.step === s - 1);
+      const next = cellEls.find(c => c.track === refTrack && c.step === s);
+      if (prev && next) {
+        const prevRight = prev.el.getBoundingClientRect().right;
+        const nextLeft = next.el.getBoundingClientRect().left;
+        const x = (prevRight + nextLeft) / 2 - rootRect.left;
         beatDividers[i].style.left = `${x}px`;
       }
     }
