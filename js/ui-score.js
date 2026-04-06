@@ -43,10 +43,17 @@ const UIScore = (() => {
 
     const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Dot, StaveTie } = VexFlow;
 
-    containerEl.innerHTML = '';
+    // ★ 幅をSVG消去の「前に」取得する。
+    // innerHTML='' の後に clientWidth を読むと強制リフローが走り、
+    // スクロールバー消失等でコンテナ幅が変わり、新旧SVGの幅が不一致になる。
+    // これが全てのレイアウトずれの根本原因だった。
     const width = Math.max(560, containerEl.clientWidth || containerEl.parentElement.clientWidth || 700);
     const height = 300;
     scoreWidthPx = width;
+
+    // コンテナ高さを固定してSVG入替中のリフローを防止
+    containerEl.style.height = containerEl.offsetHeight + 'px';
+    containerEl.innerHTML = '';
 
     const renderer = new Renderer(containerEl, Renderer.Backends.SVG);
     renderer.resize(width, height);
@@ -134,6 +141,9 @@ const UIScore = (() => {
 
     // --- 拍区切り線（譜面側） -------------------------------------------
     drawBeatDividers(ctx, stepXs, staveTopY, staveBottomY);
+
+    // SVG入替完了 — コンテナ高さ固定を解除
+    containerEl.style.height = '';
   }
 
   // --- ドラム声部構築（既存ロジック） ----------------------------------
