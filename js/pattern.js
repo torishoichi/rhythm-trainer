@@ -5,15 +5,18 @@
 const STEPS_PER_BEAT = 4;
 const BEATS_PER_BAR  = 4;
 const STEPS          = STEPS_PER_BEAT * BEATS_PER_BAR; // 16
-// c4 は「連続 ON で 1 つの長音になる」持続トラック。音価を耳で感じるための鍵盤音。
-const TRACKS         = ['bass', 'snare', 'hat', 'c4'];
-const TRACK_LABELS   = { bass: 'バス', snare: 'スネア', hat: 'ハイハット', c4: 'C4' };
+// c4 / g4 は「連続 ON で 1 つの長音になる」持続トラック。音価を耳で感じるための鍵盤音。
+const TRACKS         = ['bass', 'snare', 'hat', 'g4', 'c4'];
+const TRACK_LABELS   = { bass: 'バス', snare: 'スネア', hat: 'ハイハット', g4: 'G4', c4: 'C4' };
 const TRACK_ICONS    = {
   bass:  '<svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" fill="currentColor"/></svg>',
   snare: '<svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="3.5" y1="8" x2="16.5" y2="8" stroke="currentColor" stroke-width="0.8"/><line x1="3.5" y1="12" x2="16.5" y2="12" stroke="currentColor" stroke-width="0.8"/></svg>',
   hat:   '<svg width="20" height="20" viewBox="0 0 20 20"><line x1="4" y1="4" x2="16" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="4" x2="4" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  g4:    '<svg width="20" height="20" viewBox="0 0 20 20"><ellipse cx="10" cy="14" rx="4" ry="3" fill="currentColor" transform="rotate(-20 10 14)"/><line x1="13.5" y1="4" x2="13.5" y2="13" stroke="currentColor" stroke-width="1.8"/><line x1="13.5" y1="4" x2="17" y2="8" stroke="currentColor" stroke-width="1.2"/></svg>',
   c4:    '<svg width="20" height="20" viewBox="0 0 20 20"><ellipse cx="8" cy="14" rx="4" ry="3" fill="currentColor" transform="rotate(-20 8 14)"/><line x1="11.5" y1="4" x2="11.5" y2="13" stroke="currentColor" stroke-width="1.8"/></svg>',
 };
+// 3 値モデル（0=off, 1=hit, 2=hold）を使う持続トラック
+const SUSTAINED_TRACKS = ['c4', 'g4'];
 
 // c4 トラックは 3 値モデル:
 //   0 = off
@@ -26,6 +29,7 @@ function createEmptyPattern() {
     bass:  new Array(STEPS).fill(false),
     snare: new Array(STEPS).fill(false),
     hat:   new Array(STEPS).fill(false),
+    g4:    new Array(STEPS).fill(0),
     c4:    new Array(STEPS).fill(0),
   };
 }
@@ -35,40 +39,45 @@ function clonePattern(p) {
     bass:  p.bass.slice(),
     snare: p.snare.slice(),
     hat:   p.hat.slice(),
+    g4:    (p.g4 || new Array(STEPS).fill(0)).slice(),
     c4:    (p.c4 || new Array(STEPS).fill(0)).slice(),
   };
 }
 
 function isStepEmpty(p, step) {
-  return !p.bass[step] && !p.snare[step] && !p.hat[step] && !p.c4[step];
+  return !p.bass[step] && !p.snare[step] && !p.hat[step] && !p.g4[step] && !p.c4[step];
 }
 
-function isC4RunStart(p, step) {
-  return !!p.c4 && p.c4[step] === 1;
+// --- 汎用 run ヘルパ（持続トラック共通） --------------------------------
+function isRunStart(p, track, step) {
+  return !!p[track] && p[track][step] === 1;
 }
 
-// step が hit のとき、その音の長さ（hit + 後続 hold の数）を返す
-function c4RunLength(p, step) {
-  if (!p.c4 || p.c4[step] !== 1) return 0;
+function runLength(p, track, step) {
+  if (!p[track] || p[track][step] !== 1) return 0;
   let len = 1;
-  while (step + len < STEPS && p.c4[step + len] === 2) len++;
+  while (step + len < STEPS && p[track][step + len] === 2) len++;
   return len;
 }
 
-// c4 の run リストを抽出：[{ start, length }, ...]
-function c4Runs(p) {
+function trackRuns(p, track) {
   const runs = [];
-  if (!p.c4) return runs;
+  if (!p[track]) return runs;
   for (let i = 0; i < STEPS; i++) {
-    if (p.c4[i] === 1) {
+    if (p[track][i] === 1) {
       let len = 1;
-      while (i + len < STEPS && p.c4[i + len] === 2) len++;
+      while (i + len < STEPS && p[track][i + len] === 2) len++;
       runs.push({ start: i, length: len });
       i += len - 1;
     }
   }
   return runs;
 }
+
+// 後方互換ラッパー（既存コードが参照）
+function isC4RunStart(p, step) { return isRunStart(p, 'c4', step); }
+function c4RunLength(p, step)  { return runLength(p, 'c4', step); }
+function c4Runs(p)             { return trackRuns(p, 'c4'); }
 
 // 16 分音符単位のステップ数 → 音価名
 // 16 = 全音符、8 = 2分、4 = 4分、2 = 8分、1 = 16分、3 = 付点8分、6 = 付点4分、12 = 付点2分

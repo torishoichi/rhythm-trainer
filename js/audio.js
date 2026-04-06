@@ -95,14 +95,19 @@ const DrumAudio = (() => {
     if (patternRef.hat[step])   playHat(time);
 
     // C4：run の先頭でのみ発音し、run 長に合わせた持続時間を渡す
-    if (patternRef.c4 && isC4RunStart(patternRef, step)) {
-      const runLen = c4RunLength(patternRef, step);
-      // runLen ステップ分の秒数を合計
+    if (isRunStart(patternRef, 'c4', step)) {
+      const rl = runLength(patternRef, 'c4', step);
       let dur = 0;
-      for (let k = 0; k < runLen; k++) {
-        dur += stepDurationSec[(step + k) % STEPS];
-      }
+      for (let k = 0; k < rl; k++) dur += stepDurationSec[(step + k) % STEPS];
       playC4(time, dur);
+    }
+
+    // G4：C4 と同じ run-length パターン
+    if (isRunStart(patternRef, 'g4', step)) {
+      const rl = runLength(patternRef, 'g4', step);
+      let dur = 0;
+      for (let k = 0; k < rl; k++) dur += stepDurationSec[(step + k) % STEPS];
+      playG4(time, dur);
     }
   }
 
@@ -204,6 +209,34 @@ const DrumAudio = (() => {
     osc2.stop(time + durationSec + 0.02);
   }
 
+  // G4 = 391.995Hz。C4 と同じエンベロープ構造
+  function playG4(time, durationSec) {
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc2.type = 'sine';
+    osc.frequency.value = 391.9954;
+    osc2.frequency.value = 391.9954 * 2;
+    const gain = ctx.createGain();
+    const attack = 0.008;
+    const release = Math.min(0.08, durationSec * 0.3);
+    const sustainEnd = Math.max(time + attack, time + durationSec - release);
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.exponentialRampToValueAtTime(0.35, time + attack);
+    gain.gain.setValueAtTime(0.35, sustainEnd);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + durationSec);
+    const gain2 = ctx.createGain();
+    gain2.gain.value = 0.08;
+    osc.connect(gain);
+    osc2.connect(gain2).connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(time);
+    osc2.start(time);
+    osc.stop(time + durationSec + 0.02);
+    osc2.stop(time + durationSec + 0.02);
+  }
+
   function getCtx() { return ctx; }
   function getStepDurationsSec() { return stepDurationSec.slice(); }
   function getStepDurationsUnit() { return stepDurationUnits.slice(); }
@@ -211,7 +244,7 @@ const DrumAudio = (() => {
   return {
     ensureContext, start, stop, setBpm, setSwing, getCtx,
     getStepDurationsSec, getStepDurationsUnit,
-    playBass, playSnare, playHat, playC4,
+    playBass, playSnare, playHat, playC4, playG4,
     get scheduledQueue() { return scheduledQueue; },
     get isPlaying() { return isPlaying; },
     get startedAt() { return startedAt; },

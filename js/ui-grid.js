@@ -118,9 +118,9 @@ const UIGrid = (() => {
     return cell;
   }
 
-  // C4 行はセルが display:none になることがあるため、X 座標からステップを算出
-  function c4StepFromClientX(clientX) {
-    const cells = rowAreas['c4'];
+  // 持続トラック行はセルが display:none になることがあるため、X 座標からステップを算出
+  function sustainedStepFromClientX(track, clientX) {
+    const cells = rowAreas[track];
     if (!cells) return -1;
     const rect = cells.getBoundingClientRect();
     if (rect.width === 0) return -1;
@@ -134,20 +134,30 @@ const UIGrid = (() => {
     return STEPS - 1;
   }
 
+  // 座標がどの持続トラック行に属するかを判定
+  function sustainedTrackAtPoint(clientX, clientY) {
+    for (const t of SUSTAINED_TRACKS) {
+      const area = rowAreas[t];
+      if (!area) continue;
+      const r = area.getBoundingClientRect();
+      if (clientY >= r.top && clientY <= r.bottom
+          && clientX >= r.left && clientX <= r.right) {
+        const step = sustainedStepFromClientX(t, clientX);
+        if (step >= 0) return { track: t, step };
+      }
+    }
+    return null;
+  }
+
   function onPointerDown(e) {
     if (rootEl.dataset.readonly === '1') return;
 
-    // C4 行: 座標ベースで判定（display:none セルでも検出可能）
+    // 持続トラック行: 座標ベースで判定（display:none セルでも検出可能）
     let track, step;
-    const c4Area = rowAreas['c4'];
-    if (c4Area) {
-      const r = c4Area.getBoundingClientRect();
-      if (e.clientY >= r.top && e.clientY <= r.bottom
-          && e.clientX >= r.left && e.clientX <= r.right) {
-        track = 'c4';
-        step = c4StepFromClientX(e.clientX);
-        if (step < 0) return;
-      }
+    const sustained = sustainedTrackAtPoint(e.clientX, e.clientY);
+    if (sustained) {
+      track = sustained.track;
+      step = sustained.step;
     }
     if (!track) {
       const cell = cellAtPoint(e.clientX, e.clientY);
@@ -159,23 +169,23 @@ const UIGrid = (() => {
     e.preventDefault();
     rootEl.setPointerCapture(e.pointerId);
 
-    if (track === 'c4') {
-      if (currentPattern.c4[step] !== 0) {
-        clearC4RunContaining(currentPattern, step);
+    if (SUSTAINED_TRACKS.includes(track)) {
+      if (currentPattern[track][step] !== 0) {
+        clearRunContaining(currentPattern, track, step);
         syncVisuals(currentPattern);
         notifyChange(track, step);
         haptic();
         dragState = null;
       } else {
-        const snapshot = currentPattern.c4.slice();
+        const snapshot = currentPattern[track].slice();
         snapshot[step] = 1;
         dragState = {
-          track: 'c4',
+          track,
           startStep: step,
           snapshot,
           currentEnd: step,
         };
-        applyC4Drag(step);
+        applySustainedDrag(step);
       }
     } else {
       const newVal = !currentPattern[track][step];
@@ -189,10 +199,10 @@ const UIGrid = (() => {
 
   function onPointerMove(e) {
     if (!dragState) return;
-    if (dragState.track === 'c4') {
-      const step = c4StepFromClientX(e.clientX);
+    if (SUSTAINED_TRACKS.includes(dragState.track)) {
+      const step = sustainedStepFromClientX(dragState.track, e.clientX);
       if (step < 0 || step === dragState.currentEnd) return;
-      applyC4Drag(step);
+      applySustainedDrag(step);
     } else {
       const cell = cellAtPoint(e.clientX, e.clientY);
       if (!cell) return;
@@ -213,29 +223,26 @@ const UIGrid = (() => {
     dragState = null;
   }
 
-  function applyC4Drag(step) {
+  function applySustainedDrag(step) {
+    const t = dragState.track;
     const snap = dragState.snapshot;
-    // snap を復元
-    for (let i = 0; i < STEPS; i++) currentPattern.c4[i] = snap[i];
-    // 新しい range [from..to] を hit + hold で塗る
+    for (let i = 0; i < STEPS; i++) currentPattern[t][i] = snap[i];
     const from = Math.min(dragState.startStep, step);
     const to   = Math.max(dragState.startStep, step);
-    currentPattern.c4[from] = 1;
-    for (let i = from + 1; i <= to; i++) currentPattern.c4[i] = 2;
+    currentPattern[t][from] = 1;
+    for (let i = from + 1; i <= to; i++) currentPattern[t][i] = 2;
     dragState.currentEnd = step;
     syncVisuals(currentPattern);
-    notifyChange('c4', step);
+    notifyChange(t, step);
   }
 
-  function clearC4RunContaining(pattern, step) {
-    // step が属する run を特定して 0 に
+  function clearRunContaining(pattern, track, step) {
     let start = step;
-    while (start > 0 && pattern.c4[start] === 2) start--;
-    // start は 1（hit）または 0 のはず
-    if (pattern.c4[start] === 0) return;
+    while (start > 0 && pattern[track][start] === 2) start--;
+    if (pattern[track][start] === 0) return;
     let end = start;
-    while (end + 1 < STEPS && pattern.c4[end + 1] === 2) end++;
-    for (let i = start; i <= end; i++) pattern.c4[i] = 0;
+    while (end + 1 < STEPS && pattern[track][end + 1] === 2) end++;
+    for (let i = start; i <= end; i++) pattern[track][i] = 0;
   }
 
   function notifyChange(track, step) {
@@ -246,37 +253,37 @@ const UIGrid = (() => {
   function syncVisuals(pattern) {
     currentPattern = pattern;
     for (const c of cellEls) {
-      if (c.track === 'c4') continue;
+      if (SUSTAINED_TRACKS.includes(c.track)) continue;
       c.el.classList.toggle('on', !!pattern[c.track][c.step]);
     }
-    updateC4Visuals(pattern);
+    for (const t of SUSTAINED_TRACKS) updateSustainedVisuals(pattern, t);
   }
 
-  function updateC4Visuals(pattern) {
-    if (!pattern.c4) return;
-    // 全 C4 セルをリセット（span・非表示を解除）
+  function updateSustainedVisuals(pattern, track) {
+    if (!pattern[track]) return;
+    // 全セルをリセット（span・非表示を解除）
+    // visibility:hidden を使い、グリッドレイアウトを固定する（display:none だとリフローが起きる）
     for (const c of cellEls) {
-      if (c.track !== 'c4') continue;
+      if (c.track !== track) continue;
       c.el.classList.remove('on', 'run-single', 'run-span');
       c.el.style.gridColumn = `${c.step + 1}`;
-      c.el.style.display = '';
+      c.el.style.visibility = '';
     }
     // hit を起点に run を描画
     for (let i = 0; i < STEPS; i++) {
-      if (pattern.c4[i] === 1) {
+      if (pattern[track][i] === 1) {
         let len = 1;
-        while (i + len < STEPS && pattern.c4[i + len] === 2) len++;
-        const startCell = cellEls.find(c => c.track === 'c4' && c.step === i);
+        while (i + len < STEPS && pattern[track][i + len] === 2) len++;
+        const startCell = cellEls.find(c => c.track === track && c.step === i);
         startCell.el.classList.add('on');
         if (len === 1) {
           startCell.el.classList.add('run-single');
         } else {
-          // 複数セルを 1 つの gridColumn span でまとめる（gap を埋めて 1 枚板に）
           startCell.el.style.gridColumn = `${i + 1} / span ${len}`;
           startCell.el.classList.add('run-span');
           for (let k = 1; k < len; k++) {
-            const midCell = cellEls.find(c => c.track === 'c4' && c.step === i + k);
-            midCell.el.style.display = 'none';
+            const midCell = cellEls.find(c => c.track === track && c.step === i + k);
+            midCell.el.style.visibility = 'hidden';
           }
         }
         i += len - 1;

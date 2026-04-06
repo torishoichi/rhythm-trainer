@@ -1,4 +1,4 @@
-// VexFlow 5 で「ドラム譜（上）+ C4 単線譜（下）」を描画する。
+// VexFlow 5 で「ドラム譜（上）+ メロディ2声譜（下: G4↑ + C4↓）」を描画する。
 //
 // 外部から呼ぶもの:
 //   UIScore.render(containerId, headEl, labelEl, pattern, swing)
@@ -64,41 +64,54 @@ const UIScore = (() => {
     const voice2 = new Voice({ numBeats: 4, beatValue: 4 });
     voice2.addTickables(drumResult.lowerNotes);
 
-    // --- 下：C4 単線譜 ---------------------------------------------------
-    const c4StaveY = 160;
-    const c4Stave = new Stave(10, c4StaveY, width - 20);
-    // 1 本線の譜表
-    if (typeof c4Stave.setNumLines === 'function') c4Stave.setNumLines(1);
-    c4Stave.addTimeSignature('4/4');
-    c4Stave.setContext(ctx).draw();
+    // --- 下：メロディ2声 単線譜（G4↑ + C4↓、同一線上） --------------------
+    const melodyStaveY = 160;
+    const melodyStave = new Stave(10, melodyStaveY, width - 20);
+    if (typeof melodyStave.setNumLines === 'function') melodyStave.setNumLines(1);
+    melodyStave.addTimeSignature('4/4');
+    melodyStave.setContext(ctx).draw();
 
-    // C4 譜表のノート開始位置をドラム譜表に揃える（clef 有無の差を吸収）
-    c4Stave.setNoteStartX(drumStave.getNoteStartX());
+    // メロディ譜表のノート開始位置をドラム譜表に揃える（clef 幅の差を吸収）
+    melodyStave.setNoteStartX(drumStave.getNoteStartX());
 
-    const c4Result = buildC4Notes(pattern, StaveNote, Dot);
-    const c4Notes = c4Result.notes;
-    const c4Ties = c4Result.ties;
+    // G4 voice（符幹上）— 音符は 'b/4'（線上）、休符は 'd/5'（線の上）
+    const g4Result = buildMelodyNotes(pattern, 'g4', 'b/4', 'd/5', 1, StaveNote, Dot);
+    const g4Voice = new Voice({ numBeats: 4, beatValue: 4 });
+    g4Voice.addTickables(g4Result.notes);
+
+    // C4 voice（符幹下）— 音符は 'b/4'（線上）、休符は 'f/4'（線の下）
+    const c4Result = buildMelodyNotes(pattern, 'c4', 'b/4', 'f/4', -1, StaveNote, Dot);
     const c4Voice = new Voice({ numBeats: 4, beatValue: 4 });
-    c4Voice.addTickables(c4Notes);
+    c4Voice.addTickables(c4Result.notes);
 
     // 全声部を同一フォーマッタで整列（拍位置の X が一致する）
     new Formatter()
       .joinVoices([voice1, voice2])
-      .joinVoices([c4Voice])
-      .format([voice1, voice2, c4Voice], width - 120);
+      .joinVoices([g4Voice, c4Voice])
+      .format([voice1, voice2, g4Voice, c4Voice], width - 120);
 
     voice1.draw(ctx, drumStave);
     voice2.draw(ctx, drumStave);
     drumResult.upperBeams.forEach(b => b.setContext(ctx).draw());
     drumResult.lowerBeams.forEach(b => b.setContext(ctx).draw());
 
-    c4Voice.draw(ctx, c4Stave);
+    g4Voice.draw(ctx, melodyStave);
+    c4Voice.draw(ctx, melodyStave);
 
-    // C4 タイ描画（拍境界で分割された持続音を結ぶ）
-    for (const t of c4Ties) {
+    // G4 タイ描画
+    for (const t of g4Result.ties) {
       new StaveTie({
-        firstNote: c4Notes[t.first],
-        lastNote: c4Notes[t.last],
+        firstNote: g4Result.notes[t.first],
+        lastNote: g4Result.notes[t.last],
+        firstIndices: [0],
+        lastIndices: [0],
+      }).setContext(ctx).draw();
+    }
+    // C4 タイ描画
+    for (const t of c4Result.ties) {
+      new StaveTie({
+        firstNote: c4Result.notes[t.first],
+        lastNote: c4Result.notes[t.last],
         firstIndices: [0],
         lastIndices: [0],
       }).setContext(ctx).draw();
@@ -111,14 +124,11 @@ const UIScore = (() => {
     });
 
     staveTopY = drumStaveY;
-    staveBottomY = c4StaveY + 40;
+    staveBottomY = melodyStaveY + 40;
 
     containerOffsetLeft = containerEl.offsetLeft || 0;
 
     // --- 拍区切り線（譜面側） -------------------------------------------
-    // stepXs[0], stepXs[4], stepXs[8], stepXs[12] を基準に 3 本。
-    // 実際は「拍の開始位置」として step 4, 8, 12 の直前あたりに置きたい。
-    // ここではシンプルに step 4, 8, 12 の X を使う。
     drawBeatDividers(ctx, stepXs, staveTopY, staveBottomY);
   }
 
@@ -183,34 +193,35 @@ const UIScore = (() => {
     return beams;
   }
 
-  // --- C4 ノート構築 ----------------------------------------------------
-  // c4 配列 (0/1/2) をスキャンして、hit を起点に「音符」を作り、off を「休符」で埋める。
-  // 拍境界で分割し、分割された音符間のタイ情報も返す。
-  function buildC4Notes(pattern, StaveNote, Dot) {
+  // --- メロディノート構築（C4 / G4 共通） -----------------------------------
+  // 3値配列 (0/1/2) をスキャンして音符・休符を作り、タイ情報も返す。
+  // noteKey: 音符のキー ('b/4' = 線上)
+  // restKey: 休符のキー（2声で重ならないよう上下にずらす）
+  // stemDir: 1=上, -1=下
+  function buildMelodyNotes(pattern, track, noteKey, restKey, stemDir, StaveNote, Dot) {
+    const arr = pattern[track];
     const notes = [];
-    const ties = [];  // { first: noteIndex, last: noteIndex }
+    const ties = [];
     let i = 0;
     while (i < STEPS) {
-      if (pattern.c4 && pattern.c4[i] === 1) {
-        // hit：次の hit / off が来るまでの長さ
+      if (arr && arr[i] === 1) {
         let len = 1;
-        while (i + len < STEPS && pattern.c4[i + len] === 2) len++;
+        while (i + len < STEPS && arr[i + len] === 2) len++;
         const parts = splitNoteBeatAware(i, len);
         for (let p = 0; p < parts.length; p++) {
           const idx = notes.length;
-          notes.push(makeNote(StaveNote, Dot, parts[p].duration, parts[p].dots, false));
+          notes.push(makeMelodyNote(StaveNote, Dot, parts[p].duration, parts[p].dots, false, noteKey, stemDir));
           if (p < parts.length - 1) {
             ties.push({ first: idx, last: idx + 1 });
           }
         }
         i += len;
       } else {
-        // off：次の hit が来るまでの長さを休符に（8分境界で分割、付点なし）
         let len = 0;
-        while (i + len < STEPS && (!pattern.c4 || pattern.c4[i + len] !== 1)) len++;
+        while (i + len < STEPS && (!arr || arr[i + len] !== 1)) len++;
         if (len === 0) { i++; continue; }
         for (const d of splitRestBeatAware(i, len)) {
-          notes.push(makeNote(StaveNote, Dot, d.duration, d.dots, true));
+          notes.push(makeMelodyNote(StaveNote, Dot, d.duration, d.dots, true, restKey, stemDir));
         }
         i += len;
       }
@@ -218,11 +229,11 @@ const UIScore = (() => {
     return { notes, ties };
   }
 
-  function makeNote(StaveNote, Dot, duration, dots, isRest) {
+  function makeMelodyNote(StaveNote, Dot, duration, dots, isRest, key, stemDir) {
     const dur = duration + 'd'.repeat(dots) + (isRest ? 'r' : '');
-    const n = new StaveNote({ keys: ['b/4'], duration: dur });
-    // VexFlow 5: 'd' suffix はティック数を正しく設定するが、
-    // ドットの視覚表示には明示的な Dot モディファイアが必要
+    const opts = { keys: [key], duration: dur };
+    if (!isRest) opts.stemDirection = stemDir;
+    const n = new StaveNote(opts);
     for (let d = 0; d < dots; d++) {
       n.addModifier(new Dot(), 0);
     }
