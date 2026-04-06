@@ -84,11 +84,15 @@ const UIScore = (() => {
     const c4Voice = new Voice({ numBeats: 4, beatValue: 4 });
     c4Voice.addTickables(c4Result.notes);
 
-    // 全声部を同一フォーマッタで整列（拍位置の X が一致する）
+    // ドラム声部とメロディ声部を別フォーマッタで整形。
+    // 同一フォーマッタだとメロディの音価変更でドラム X 座標が動き、DTM グリッドが揺れる。
+    const noteWidth = width - 120;
     new Formatter()
       .joinVoices([voice1, voice2])
+      .format([voice1, voice2], noteWidth);
+    new Formatter()
       .joinVoices([g4Voice, c4Voice])
-      .format([voice1, voice2, g4Voice, c4Voice], width - 120);
+      .format([g4Voice, c4Voice], noteWidth);
 
     voice1.draw(ctx, drumStave);
     voice2.draw(ctx, drumStave);
