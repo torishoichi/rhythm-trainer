@@ -193,26 +193,26 @@
   }
 
   // --- 譜面スケール（モバイル用） ----------------------------------------
+  // CSS transform ではなく viewBox + width:100% でネイティブスケール。
+  // レイアウトボックスがコンテナ幅に一致するため overflow 問題なし。
   function applyScoreScale() {
     const scoreEl = document.getElementById('score');
     if (!scoreEl) return;
     const svg = scoreEl.querySelector('svg');
     if (!svg) return;
-    // score-wrap の実幅をコンテナ幅として使う
-    const wrapEl = scoreEl.parentElement;
-    const containerWidth = wrapEl.clientWidth;
-    if (containerWidth <= 0) return;
-    const svgWidth = parseFloat(svg.getAttribute('width')) || 560;
-    const svgHeight = parseFloat(svg.getAttribute('height')) || 300;
-    const scale = Math.min(1, containerWidth / svgWidth);
-    // transform はレイアウトを変えないので、コンテナサイズも明示的に制限
-    svg.style.transformOrigin = 'top left';
-    svg.style.transform = `scale(${scale})`;
+    const w = parseFloat(svg.getAttribute('width'));
+    const h = parseFloat(svg.getAttribute('height'));
+    if (!w || !h) return;
+    // viewBox 設定でSVGをレスポンシブ化
+    if (!svg.getAttribute('viewBox')) {
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    }
+    svg.removeAttribute('width');
+    svg.removeAttribute('height');
+    svg.style.width = '100%';
+    svg.style.height = 'auto';
     svg.style.display = 'block';
-    scoreEl.style.width = `${containerWidth}px`;
-    scoreEl.style.height = `${svgHeight * scale}px`;
     scoreEl.style.minHeight = 'auto';
-    scoreEl.style.overflow = 'hidden';
   }
 
   // --- 再生制御 ------------------------------------------------------
@@ -272,18 +272,20 @@
 
     const scoreEl = document.getElementById('score');
     if (!scoreEl) return;
-
-    // モバイルではスケール後の実寸で計算
-    const svg = scoreEl.querySelector('svg');
-    let scaleF = 1;
-    if (isMobile && svg) {
-      const t = svg.style.transform;
-      const m = t && t.match(/scale\(([\d.]+)\)/);
-      if (m) scaleF = parseFloat(m[1]);
-    }
-
     const scoreRect = scoreEl.getBoundingClientRect();
     if (scoreRect.width === 0) return;
+
+    // viewBox 方式: SVG が CSS でスケールされているため
+    // getAbsoluteX() の値を実描画スケールに変換
+    const svg = scoreEl.querySelector('svg');
+    let scaleF = 1;
+    if (svg) {
+      const vb = svg.getAttribute('viewBox');
+      if (vb) {
+        const vbW = parseFloat(vb.split(/\s+/)[2]);
+        if (vbW > 0) scaleF = scoreRect.width / vbW;
+      }
+    }
 
     const firstNoteAbs = scoreRect.left + metrics.firstX * scaleF;
     const lastNoteAbs  = scoreRect.left + metrics.lastX * scaleF;

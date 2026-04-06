@@ -250,6 +250,19 @@ main {
   padding: 14px;
   color: var(--sub);
 }
+.app-version {
+  font-size: 11px;
+  color: var(--sub);
+  opacity: 0.5;
+}
+.mob-version {
+  position: absolute;
+  right: 8px;
+  bottom: 4px;
+  font-size: 9px;
+  color: var(--sub);
+  opacity: 0.4;
+}
 
 /* --- Panel header (DTM title + score toggle) --- */
 .panel-header {

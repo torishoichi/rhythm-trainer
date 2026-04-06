@@ -350,12 +350,16 @@ const UIScore = (() => {
       headEl.classList.remove('visible');
       return;
     }
-    // SVG が CSS scale されている場合、座標もスケールする
+    // viewBox 方式: SVG が CSS でスケールされている場合、座標を実寸に変換
     const svg = containerEl && containerEl.querySelector('svg');
     let scale = 1;
     if (svg) {
-      const m = (svg.style.transform || '').match(/scale\(([\d.]+)\)/);
-      if (m) scale = parseFloat(m[1]);
+      const vb = svg.getAttribute('viewBox');
+      if (vb) {
+        const vbW = parseFloat(vb.split(/\s+/)[2]);
+        const renderedW = svg.getBoundingClientRect().width;
+        if (vbW > 0 && renderedW > 0) scale = renderedW / vbW;
+      }
     }
     const x = stepXs[step] * scale + containerOffsetLeft;
     headEl.style.left = `${x}px`;
