@@ -87,25 +87,23 @@
     requestAnimationFrame(renderLoop);
   }
 
-  // パターン変更時のハンドラ：譜面も再描画してアライン再計算
+  // パターン変更時のハンドラ：譜面のみ再描画（グリッドアラインは動かさない）
+  // requestAlign() をここで呼ぶと、VexFlow のフォーマッタが音符幅に応じて
+  // X 座標を微妙に変えるたびグリッドが揺れるため、init / resize 時のみ実行する。
   function onGridToggle() {
     if (isMobile) {
-      // score 領域のサイズを固定してリフロー防止
       const wrap = document.getElementById('score-wrap');
       const scoreEl = document.getElementById('score');
       if (wrap) { wrap.style.height = wrap.offsetHeight + 'px'; wrap.style.width = wrap.offsetWidth + 'px'; }
       if (scoreEl) { scoreEl.style.width = scoreEl.offsetWidth + 'px'; }
       UIScore.refresh(currentPattern, swing);
-      applyScoreScale();  // SVG再生成直後に同期的にviewBox設定
-      requestAlign();
-      // サイズ固定を解除
+      applyScoreScale();
       requestAnimationFrame(() => {
         if (wrap) { wrap.style.height = ''; wrap.style.width = ''; }
         if (scoreEl) { scoreEl.style.width = ''; }
       });
     } else {
       UIScore.refresh(currentPattern, swing);
-      requestAlign();
     }
   }
 
