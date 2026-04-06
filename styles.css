@@ -516,8 +516,8 @@ main {
   .beat-indicator { display: none !important; }
   .panel-header { margin-bottom: 0; }
 
-  /* --- DTM Grid — 画面端ギリギリまで --- */
-  .grid-wrap { gap: 2px; }
+  /* --- DTM Grid — 画面端ギリギリ、セル縦長で大きく --- */
+  .grid-wrap { gap: 1px; }
   .track-row { gap: 2px; }
   .track-label {
     width: 18px;
@@ -526,7 +526,7 @@ main {
   .track-label svg { width: 14px; height: 14px; }
 
   .track-cells {
-    height: 34px;
+    height: 48px;
     gap: 1px;
   }
   .grid-cell {
@@ -534,7 +534,7 @@ main {
     border-radius: 3px;
     border-width: 0.5px;
   }
-  .grid-cell:active { transform: scale(0.9); }
+  .grid-cell:active { transform: scale(0.92); }
 
   /* --- Score — viewBox で画面幅にフィット --- */
   .score-wrap {
