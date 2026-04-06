@@ -89,9 +89,19 @@
 
   // パターン変更時のハンドラ：譜面も再描画してアライン再計算
   function onGridToggle() {
-    UIScore.refresh(currentPattern, swing);
-    if (isMobile) applyScoreScale();
-    requestAlign();
+    if (isMobile) {
+      // score-wrap の高さを固定してリフロー防止
+      const wrap = document.getElementById('score-wrap');
+      if (wrap) wrap.style.height = wrap.offsetHeight + 'px';
+      UIScore.refresh(currentPattern, swing);
+      applyScoreScale();  // SVG再生成直後に同期的にviewBox設定
+      requestAlign();
+      // 高さ固定を解除
+      requestAnimationFrame(() => { if (wrap) wrap.style.height = ''; });
+    } else {
+      UIScore.refresh(currentPattern, swing);
+      requestAlign();
+    }
   }
 
   // --- イベント配線 -------------------------------------------------

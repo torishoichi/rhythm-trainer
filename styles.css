@@ -461,7 +461,7 @@ main {
   body { touch-action: manipulation; }
 
   /* Header — compact */
-  .app-header { padding: 6px 12px; border-bottom: none; }
+  .app-header { padding: 6px 10px; border-bottom: none; }
   .app-header h1 { font-size: 14px; }
 
   /* Desktop transport — hide */
@@ -485,22 +485,30 @@ main {
     box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
   }
 
-  /* Main — 縦スクロールでPC版と同じ内容を全表示 */
+  /* Main — 画面幅いっぱいに使う */
   main {
-    padding: 6px;
-    padding-bottom: 84px; /* ボトムバーの高さ分 */
-    gap: 6px;
+    padding: 4px 0;
+    padding-bottom: 84px;
+    gap: 4px;
     max-width: none;
   }
 
-  /* Panels — full width, tight padding */
+  /* Panels — 枠なし、フルブリード */
   .panel {
-    border-radius: 8px;
-    padding: 6px 6px 8px;
+    border: none;
+    border-radius: 0;
+    padding: 4px 6px 6px;
+    background: transparent;
+  }
+  /* パネル間の区切り線 */
+  .panel-score {
+    border-top: 1px solid var(--line);
+    padding-top: 6px;
   }
   .panel h2 {
-    margin: 0 0 4px;
+    margin: 0 0 3px;
     font-size: 11px;
+    padding-left: 2px;
   }
 
   /* --- Score toggle / Beat indicator は不要 --- */
@@ -508,7 +516,7 @@ main {
   .beat-indicator { display: none !important; }
   .panel-header { margin-bottom: 0; }
 
-  /* --- DTM Grid — 16ステップ全表示、超タイト --- */
+  /* --- DTM Grid — 画面端ギリギリまで --- */
   .grid-wrap { gap: 2px; }
   .track-row { gap: 2px; }
   .track-label {
@@ -518,7 +526,7 @@ main {
   .track-label svg { width: 14px; height: 14px; }
 
   .track-cells {
-    height: 32px;
+    height: 34px;
     gap: 1px;
   }
   .grid-cell {
@@ -528,8 +536,7 @@ main {
   }
   .grid-cell:active { transform: scale(0.9); }
 
-  /* --- Score — CSS scale で画面幅にフィット --- */
-  /* transform はレイアウトを変えないので、コンテナで幅を制限 */
+  /* --- Score — viewBox で画面幅にフィット --- */
   .score-wrap {
     overflow: hidden;
     max-width: 100%;
