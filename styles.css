@@ -1,0 +1,333 @@
+:root {
+  --bg: #faf9f5;
+  --panel: #ffffff;
+  --ink: #2a2a2a;
+  --sub: #6b6b6b;
+  --line: #e4e2da;
+  --accent: #c44cff;
+  --bass: #c44cff;
+  --snare: #e2b23a;
+  --hat: #7bc27b;
+  --c4: #4a9eff;
+  --head: #ff3b5c;
+  --beat-line: rgba(40, 40, 40, 0.35);
+  --perfect: #39c26a;
+  --good: #f0a830;
+  --miss: #e24545;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.app-header h1 {
+  font-size: 18px;
+  margin: 0;
+  letter-spacing: 0.04em;
+}
+
+.mode-switch {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.mode-btn {
+  padding: 6px 18px;
+  border: none;
+  background: transparent;
+  color: var(--sub);
+  cursor: pointer;
+  font-size: 14px;
+}
+.mode-btn.active {
+  background: var(--ink);
+  color: #fff;
+}
+
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 20px;
+  flex-wrap: wrap;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.play-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+}
+.play-btn.playing { background: var(--accent); }
+
+.ghost-btn {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.bpm-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--sub);
+}
+.bpm-label input[type=range] { width: 160px; }
+.bpm-label #bpm-value {
+  display: inline-block;
+  min-width: 2.5em;
+  text-align: right;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.swing-label, .swing-ratio-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--sub);
+}
+.swing-label select {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+}
+.swing-ratio-label input[type=range] { width: 110px; }
+.swing-ratio-label #swing-ratio-value {
+  display: inline-block;
+  min-width: 3em;
+  text-align: right;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.swing-indicator {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f2f1ea;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  display: none;
+}
+.swing-indicator.active { display: inline-block; }
+
+.train-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.train-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--sub);
+}
+.train-controls select {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}
+.tap-btn {
+  padding: 10px 22px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.tap-btn:active { transform: translateY(1px); }
+
+.judge-display { display: flex; align-items: center; gap: 14px; }
+.judge-last {
+  min-width: 80px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #f2f1ea;
+  color: var(--sub);
+}
+.judge-last.perfect { background: var(--perfect); color: #fff; }
+.judge-last.good    { background: var(--good); color: #fff; }
+.judge-last.miss    { background: var(--miss); color: #fff; }
+
+.judge-counts { display: flex; gap: 12px; font-size: 13px; color: var(--sub); }
+.judge-counts b { color: var(--ink); }
+
+main {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 18px 20px;
+}
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--sub);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+/* --- DTM grid --- */
+.grid-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  user-select: none;
+  touch-action: none;
+  position: relative;
+}
+.track-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.track-label {
+  width: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.track-label svg {
+  display: block;
+}
+.track-cells {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 4px;
+  position: relative;
+  height: 44px;
+}
+.grid-cell {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #f4f2ea;
+  cursor: pointer;
+  transition: background 0.05s, transform 0.05s;
+  min-height: 32px;
+}
+.grid-cell:hover { background: #ecead8; }
+
+/* DTM 全体の拍区切り線（grid-wrap 基準で全トラック縦断） */
+.grid-beat-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: var(--beat-line);
+  pointer-events: none;
+  transform: translateX(-0.75px);
+  z-index: 2;
+}
+
+/* DTM 再生ヘッドライン */
+.grid-head {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--head);
+  box-shadow: 0 0 8px rgba(255, 59, 92, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+  z-index: 3;
+  transform: translateX(-1px);
+}
+.grid-head.visible { opacity: 1; }
+
+.grid-cell.on[data-track="bass"]  { background: var(--bass); border-color: var(--bass); }
+.grid-cell.on[data-track="snare"] { background: var(--snare); border-color: var(--snare); }
+.grid-cell.on[data-track="hat"]   { background: var(--hat); border-color: var(--hat); }
+.grid-cell.on[data-track="c4"]    { background: var(--c4);  border-color: var(--c4); }
+
+/* C4 行：16分は独立セル（通常 gap）、hold 連結は gridColumn span で 1 枚板 */
+.grid-cell.run-span {
+  border-radius: 4px;
+  z-index: 1;
+}
+
+body.mode-train .grid-wrap { touch-action: manipulation; }
+body.mode-train .grid-cell { cursor: default; }
+body.mode-train .grid-cell:hover { background: #f4f2ea; }
+body.mode-train .grid-cell.on[data-track="bass"]  { background: var(--bass); }
+body.mode-train .grid-cell.on[data-track="snare"] { background: var(--snare); }
+body.mode-train .grid-cell.on[data-track="hat"]   { background: var(--hat); }
+body.mode-train .grid-cell.on[data-track="c4"]    { background: var(--c4); }
+
+/* --- Score --- */
+.score-wrap {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+}
+#score {
+  min-height: 280px;
+}
+.score-head {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: var(--head);
+  box-shadow: 0 0 8px rgba(255, 59, 92, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.score-head.visible { opacity: 1; }
+
+.app-footer {
+  text-align: center;
+  padding: 14px;
+  color: var(--sub);
+}
+
+body.mode-train #clear-btn { display: none; }
