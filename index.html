@@ -4,7 +4,64 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>リズム訓練</title>
-<link rel="stylesheet" href="./styles.css?v=052">
+<link rel="stylesheet" href="./styles.css?v=053">
+<!-- モバイル用インラインCSS（外部CSSキャッシュに依存しない） -->
+<style>
+@media (max-width: 640px) {
+  html, body { margin:0; padding:0; overflow-x:hidden; overscroll-behavior-y:none; -webkit-tap-highlight-color:transparent; }
+  body { touch-action:manipulation; }
+  .app-header { padding:6px 10px; border-bottom:none; }
+  .app-header h1 { font-size:14px; }
+  .transport-desktop { display:none !important; }
+  .transport-mobile {
+    display:flex !important; align-items:center; justify-content:center; gap:20px;
+    position:fixed; bottom:0; left:0; right:0; z-index:100;
+    padding:8px 20px; padding-bottom:calc(8px + env(safe-area-inset-bottom, 0px));
+    background:var(--panel); border-top:1px solid var(--line); box-shadow:0 -2px 12px rgba(0,0,0,0.06);
+  }
+  main { padding:4px 0 !important; padding-bottom:84px !important; gap:4px !important; max-width:none !important; }
+  .panel { border:none !important; border-radius:0 !important; padding:4px 6px 6px !important; background:transparent !important; }
+  .panel-score { border-top:1px solid var(--line) !important; padding-top:6px !important; }
+  .panel h2 { margin:0 0 3px !important; font-size:11px !important; padding-left:2px; }
+  .score-toggle, .beat-indicator { display:none !important; }
+  .panel-header { margin-bottom:0; }
+  .grid-wrap { gap:2px; }
+  .track-row { gap:2px; }
+  .track-label { width:18px; flex-shrink:0; }
+  .track-label svg { width:14px; height:14px; }
+  .track-cells { height:34px; gap:1px; }
+  .grid-cell { min-height:0; border-radius:3px; border-width:0.5px; }
+  .grid-cell:active { transform:scale(0.9); }
+  .score-wrap { overflow:hidden; max-width:100%; }
+  #score { min-height:auto; overflow:hidden; max-width:100%; }
+  .app-footer { display:none !important; }
+}
+@media (max-width: 900px) and (orientation: landscape) {
+  .app-header { display:none; }
+  .transport-desktop { display:none !important; }
+  .transport-mobile {
+    display:flex !important; align-items:center; justify-content:center; gap:16px;
+    position:fixed; bottom:0; left:0; right:0; z-index:100;
+    padding:4px 16px; padding-bottom:calc(4px + env(safe-area-inset-bottom, 0px));
+    background:var(--panel); border-top:1px solid var(--line);
+  }
+  .mob-play-btn { width:40px; height:40px; font-size:16px; }
+  html, body { overflow-x:hidden; }
+  body { touch-action:manipulation; }
+  main { padding:4px !important; padding-bottom:52px !important; max-width:none !important; gap:4px !important; }
+  .panel { padding:6px !important; border-radius:8px !important; }
+  .panel h2 { margin:0 0 4px; font-size:11px; }
+  .grid-wrap { gap:2px; }
+  .track-row { gap:2px; }
+  .track-cells { height:28px; gap:1px; }
+  .track-label { width:18px; }
+  .track-label svg { width:14px; height:14px; }
+  .grid-cell { min-height:0; border-width:0.5px; }
+  .score-wrap { overflow:hidden; max-width:100%; }
+  #score { min-height:auto; overflow:hidden; max-width:100%; }
+  .app-footer { display:none !important; }
+}
+</style>
 <script src="https://cdn.jsdelivr.net/npm/vexflow@5.0.0/build/cjs/vexflow.js"></script>
 </head>
 <body>
@@ -44,7 +101,7 @@
       <circle cx="10" cy="10" r="3"/><path d="M10 1v3M10 16v3M1 10h3M16 10h3M3.5 3.5l2 2M14.5 14.5l2 2M3.5 16.5l2-2M14.5 5.5l2-2"/>
     </svg>
   </button>
-  <span class="mob-version">v0.5.2</span>
+  <span class="mob-version">v0.5.3</span>
 </nav>
 
 <!-- ボトムシート（BPM/Swing/Clear） -->
@@ -94,14 +151,14 @@
 </main>
 
 <footer class="app-footer">
-  <span class="app-version">v0.5.2</span>
+  <span class="app-version">v0.5.3</span>
   <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="torisho" data-color="#e4e2da" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#e4e2da" data-font-color="#6b6b6b" data-coffee-color="#ffffff"></script>
 </footer>
 
-<script src="./js/pattern.js?v=052"></script>
-<script src="./js/audio.js?v=052"></script>
-<script src="./js/ui-grid.js?v=052"></script>
-<script src="./js/ui-score.js?v=052"></script>
-<script src="./js/app.js?v=052"></script>
+<script src="./js/pattern.js?v=053"></script>
+<script src="./js/audio.js?v=053"></script>
+<script src="./js/ui-grid.js?v=053"></script>
+<script src="./js/ui-score.js?v=053"></script>
+<script src="./js/app.js?v=053"></script>
 </body>
 </html>
