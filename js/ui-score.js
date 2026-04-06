@@ -81,25 +81,24 @@ const UIScore = (() => {
     // メロディ譜表のノート開始位置をドラム譜表に揃える（clef 幅の差を吸収）
     melodyStave.setNoteStartX(drumStave.getNoteStartX());
 
-    // G4 voice（符幹上）— 音符は 'b/4'（線上）、休符は 'd/5'（線の上）
-    const g4Result = buildMelodyNotes(pattern, 'g4', 'b/4', 'd/5', 1, StaveNote, Dot);
+    // G4 voice（符幹上）— 音符は 'c/5'（線の上）、休符は 'd/5'（さらに上）
+    const g4Result = buildMelodyNotes(pattern, 'g4', 'c/5', 'd/5', 1, StaveNote, Dot);
     const g4Voice = new Voice({ numBeats: 4, beatValue: 4 });
     g4Voice.addTickables(g4Result.notes);
 
-    // C4 voice（符幹下）— 音符は 'b/4'（線上）、休符は 'f/4'（線の下）
-    const c4Result = buildMelodyNotes(pattern, 'c4', 'b/4', 'f/4', -1, StaveNote, Dot);
+    // C4 voice（符幹下）— 音符は 'a/4'（線の下）、休符は 'f/4'（さらに下）
+    const c4Result = buildMelodyNotes(pattern, 'c4', 'a/4', 'f/4', -1, StaveNote, Dot);
     const c4Voice = new Voice({ numBeats: 4, beatValue: 4 });
     c4Voice.addTickables(c4Result.notes);
 
-    // ドラム声部とメロディ声部を別フォーマッタで整形。
-    // 同一フォーマッタだとメロディの音価変更でドラム X 座標が動き、DTM グリッドが揺れる。
+    // 全声部を1つのフォーマッタで整形。
+    // ドラム声部が全16ステップに16分音符を持つため X グリッドはドラムが支配し、
+    // メロディの音価が変わってもドラム X 座標は動かない。
     const noteWidth = width - 120;
     new Formatter()
       .joinVoices([voice1, voice2])
-      .format([voice1, voice2], noteWidth);
-    new Formatter()
       .joinVoices([g4Voice, c4Voice])
-      .format([g4Voice, c4Voice], noteWidth);
+      .format([voice1, voice2, g4Voice, c4Voice], noteWidth);
 
     voice1.draw(ctx, drumStave);
     voice2.draw(ctx, drumStave);
