@@ -10,10 +10,6 @@
 <body>
 <header class="app-header">
   <h1>リズム訓練</h1>
-  <div class="mode-switch" role="tablist" aria-label="モード切替">
-    <button id="mode-edit" class="mode-btn active" role="tab" aria-selected="true">Edit</button>
-    <button id="mode-train" class="mode-btn" role="tab" aria-selected="false">Train</button>
-  </div>
 </header>
 
 <section class="transport">
@@ -36,26 +32,6 @@
     <input id="swing-ratio" type="range" min="50" max="75" step="1" value="66">
     <span id="swing-ratio-value">66%</span>
   </label>
-  <div id="train-controls" class="train-controls" hidden>
-    <label>
-      お題
-      <select id="preset-select">
-        <option value="quarter-bass">4分 バスドラ</option>
-        <option value="eighth-hat">8分 ハット</option>
-        <option value="backbeat">2・4拍スネア</option>
-        <option value="basic-rock">ベーシックロック</option>
-      </select>
-    </label>
-    <button id="tap-btn" class="tap-btn">TAP (Space)</button>
-    <div class="judge-display">
-      <div id="judge-last" class="judge-last">--</div>
-      <div class="judge-counts">
-        <span>Perfect <b id="cnt-perfect">0</b></span>
-        <span>Good <b id="cnt-good">0</b></span>
-        <span>Miss <b id="cnt-miss">0</b></span>
-      </div>
-    </div>
-  </div>
 </section>
 
 <main>
@@ -82,7 +58,6 @@
 <script src="./js/audio.js"></script>
 <script src="./js/ui-grid.js"></script>
 <script src="./js/ui-score.js"></script>
-<script src="./js/train.js"></script>
 <script src="./js/app.js"></script>
 </body>
 </html>
