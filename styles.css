@@ -434,32 +434,26 @@ main {
 }
 
 /* ============================================================
-   RESPONSIVE: Phone portrait (max-width: 480px)
+   RESPONSIVE: Phone (max-width: 640px)
+   PC版と同じ内容を全て表示。ボトムバーでコントロール。
    ============================================================ */
 @media (max-width: 640px) {
   html, body {
-    height: 100dvh;
-    height: 100vh; /* fallback */
-    overflow: hidden;
-    overflow-x: hidden;
-    overscroll-behavior: none;
+    margin: 0;
+    padding: 0;
+    overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
   }
-  body {
-    display: flex;
-    flex-direction: column;
-    touch-action: manipulation;
-    max-width: 100vw;
-  }
+  body { touch-action: manipulation; }
 
   /* Header — compact */
-  .app-header { padding: 8px 12px; }
-  .app-header h1 { font-size: 14px; }
+  .app-header { padding: 8px 16px; }
+  .app-header h1 { font-size: 15px; }
 
   /* Desktop transport — hide */
   .transport-desktop { display: none; }
 
-  /* Mobile transport — show */
+  /* Mobile transport — fixed bottom bar */
   .transport-mobile {
     display: flex;
     align-items: center;
@@ -477,76 +471,46 @@ main {
     box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
   }
 
-  /* Main — scrollable area above bottom bar */
+  /* Main — 縦スクロールでPC版と同じ内容を全表示 */
   main {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 8px;
-    padding-bottom: 88px; /* room for bottom bar */
+    padding: 10px;
+    padding-bottom: 90px; /* ボトムバーの高さ分 */
     gap: 10px;
     max-width: none;
-    -webkit-overflow-scrolling: touch;
   }
 
-  /* Panels */
-  .panel { border-radius: 8px; padding: 10px 8px 12px; }
-
-  /* Score panel — hidden by default on mobile */
-  .panel-score { display: none; }
-  .panel-score.show { display: block; }
-
-  /* Score toggle — visible */
-  .score-toggle[hidden] { display: inline-block; }
-  .score-toggle { display: inline-block; }
-
-  /* Beat indicator — visible */
-  .beat-indicator[hidden] { display: flex; }
-  .beat-indicator { display: flex; }
-
-  /* --- DTM Grid mobile --- */
-  .grid-wrap {
-    gap: 4px;
-    touch-action: none;
+  /* Panels — full width, compact padding */
+  .panel {
+    border-radius: 10px;
+    padding: 10px 10px 14px;
   }
+
+  /* --- Score toggle / Beat indicator は不要 --- */
+  .score-toggle { display: none !important; }
+  .beat-indicator { display: none !important; }
+
+  /* --- DTM Grid — 16ステップ全表示 --- */
+  .grid-wrap { gap: 3px; }
   .track-row { gap: 4px; }
   .track-label {
-    width: 24px;
+    width: 22px;
     flex-shrink: 0;
   }
   .track-label svg { width: 16px; height: 16px; }
 
   .track-cells {
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
-    height: 40px;
+    height: 36px;
     gap: 2px;
-    grid-template-columns: repeat(16, minmax(34px, 1fr));
-    /* モバイルではデスクトップの alignToScore 上書きを打ち消す */
-    margin-left: 0 !important;
-    width: auto !important;
-    flex: 1 !important;
   }
-  .track-cells::-webkit-scrollbar { display: none; }
+  .grid-cell {
+    min-height: 0;
+    border-radius: 3px;
+  }
+  .grid-cell:active { transform: scale(0.9); }
 
-  /* Snap at every 4th cell (beat boundary) */
-  .grid-cell:nth-child(4n+1) { scroll-snap-align: start; }
-  .grid-cell { min-height: 28px; }
-  .grid-cell:active { transform: scale(0.92); }
-
-  /* Score inside panel when shown */
-  .panel-score.show #score {
-    min-height: auto;
-  }
-  .panel-score.show .score-wrap {
-    overflow: hidden;
-  }
-  /* 非表示のスコアヘッドがはみ出さないよう */
-  .score-wrap {
-    overflow: hidden;
-  }
+  /* --- Score — CSS scale で画面幅にフィット --- */
+  #score { min-height: auto; }
+  .score-wrap { overflow: hidden; }
 
   /* Footer */
   .app-footer { display: none; }
@@ -556,7 +520,8 @@ main {
    RESPONSIVE: Phone landscape
    ============================================================ */
 @media (max-width: 900px) and (orientation: landscape) {
-  .app-header { display: none; }
+  .app-header { padding: 4px 16px; }
+  .app-header h1 { font-size: 13px; }
   .transport-desktop { display: none; }
   .transport-mobile {
     display: flex;
@@ -577,36 +542,27 @@ main {
   }
   .mob-play-btn { width: 40px; height: 40px; font-size: 16px; }
 
-  body {
-    overflow: hidden;
-    overscroll-behavior: none;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-  }
+  body { touch-action: manipulation; }
   main {
-    overflow-y: auto;
-    padding: 8px;
+    padding: 6px;
     padding-bottom: 56px;
-    padding-left: calc(8px + env(safe-area-inset-left, 0px));
-    padding-right: calc(8px + env(safe-area-inset-right, 0px));
+    padding-left: calc(6px + env(safe-area-inset-left, 0px));
+    padding-right: calc(6px + env(safe-area-inset-right, 0px));
     max-width: none;
-    gap: 8px;
+    gap: 6px;
   }
   .panel { padding: 8px; border-radius: 8px; }
-  .panel-score { display: none; }
-  .panel-score.show { display: block; }
-  .score-toggle[hidden] { display: inline-block; }
-  .beat-indicator[hidden] { display: flex; }
+  .score-toggle { display: none !important; }
+  .beat-indicator { display: none !important; }
 
-  /* Landscape: all 16 steps visible, no scroll */
-  .track-cells {
-    height: 36px;
-    gap: 2px;
-  }
-  .track-label { width: 24px; }
+  .track-cells { height: 32px; gap: 2px; }
+  .track-label { width: 22px; }
   .track-label svg { width: 14px; height: 14px; }
-  .grid-cell:active { transform: scale(0.92); }
+  .grid-cell { min-height: 0; }
+  .grid-cell:active { transform: scale(0.9); }
 
+  #score { min-height: auto; }
+  .score-wrap { overflow: hidden; }
   .app-footer { display: none; }
 }
 

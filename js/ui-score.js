@@ -350,7 +350,14 @@ const UIScore = (() => {
       headEl.classList.remove('visible');
       return;
     }
-    const x = stepXs[step] + containerOffsetLeft;
+    // SVG が CSS scale されている場合、座標もスケールする
+    const svg = containerEl && containerEl.querySelector('svg');
+    let scale = 1;
+    if (svg) {
+      const m = (svg.style.transform || '').match(/scale\(([\d.]+)\)/);
+      if (m) scale = parseFloat(m[1]);
+    }
+    const x = stepXs[step] * scale + containerOffsetLeft;
     headEl.style.left = `${x}px`;
     headEl.classList.add('visible');
   }

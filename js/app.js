@@ -10,18 +10,16 @@
   const mqMobile = window.matchMedia('(max-width: 640px)');
   const mqLandscape = window.matchMedia('(max-width: 900px) and (orientation: landscape)');
   let isMobile = mqMobile.matches || mqLandscape.matches;
-  mqMobile.addEventListener('change', onMobileChange);
-  mqLandscape.addEventListener('change', onMobileChange);
+  mqMobile.addEventListener('change', onViewportChange);
+  mqLandscape.addEventListener('change', onViewportChange);
 
-  function onMobileChange() {
+  function onViewportChange() {
     isMobile = mqMobile.matches || mqLandscape.matches;
+    UIScore.refresh(currentPattern, swing);
     if (isMobile) {
-      setupMobileUI();
-      resetGridAlignment();
-    } else {
-      UIScore.refresh(currentPattern, swing);
-      requestAlign();
+      applyScoreScale();
     }
+    requestAlign();
   }
 
   // --- DOM 参照（デスクトップ） -----------------------------------------
@@ -43,9 +41,7 @@
   const $mobBpmBadge    = document.getElementById('mob-bpm-badge');
   const $mobBpmVal      = document.getElementById('mob-bpm-val');
   const $mobSettingsBtn = document.getElementById('mob-settings-btn');
-  const $scoreToggle   = document.getElementById('score-toggle');
   const $scorePanel    = document.getElementById('score-panel');
-  const $beatIndicator = document.getElementById('beat-indicator');
 
   // --- DOM 参照（ボトムシート） ------------------------------------------
   const $sheet           = document.getElementById('bottom-sheet');
@@ -57,8 +53,6 @@
   const $sheetSwingRatioWrap  = document.getElementById('sheet-swing-ratio-wrap');
   const $sheetSwingRatioValue = document.getElementById('sheet-swing-ratio-value');
   const $sheetClearBtn   = document.getElementById('sheet-clear-btn');
-
-  let scoreVisible = false;
 
   // --- 初期化 --------------------------------------------------------
   function init() {
@@ -73,9 +67,11 @@
     applySwing();
 
     if (isMobile) {
-      // モバイル：グリッドの alignToScore を適用しない
-      setupMobileUI();
-      resetGridAlignment();
+      syncMobileControls();
+      requestAnimationFrame(() => {
+        applyScoreScale();
+        requestAlign();
+      });
     } else {
       requestAlign();
     }
@@ -83,33 +79,19 @@
     wireEvents();
     window.addEventListener('resize', debounce(() => {
       isMobile = mqMobile.matches || mqLandscape.matches;
-      if (isMobile) {
-        resetGridAlignment();
-        if (scoreVisible) {
-          UIScore.refresh(currentPattern, swing);
-          applyScoreScale();
-        }
-      } else {
-        UIScore.refresh(currentPattern, swing);
-        requestAlign();
-      }
+      UIScore.refresh(currentPattern, swing);
+      if (isMobile) applyScoreScale();
+      requestAlign();
     }, 120));
 
     requestAnimationFrame(renderLoop);
   }
 
-  function setupMobileUI() {
-    UIGrid.setupScrollSync();
-    UIGrid.buildBeatIndicator($beatIndicator);
-    syncMobileControls();
-  }
-
   // パターン変更時のハンドラ：譜面も再描画してアライン再計算
   function onGridToggle() {
-    if (!isMobile || scoreVisible) {
-      UIScore.refresh(currentPattern, swing);
-    }
-    if (!isMobile) requestAlign();
+    UIScore.refresh(currentPattern, swing);
+    if (isMobile) applyScoreScale();
+    requestAlign();
   }
 
   // --- イベント配線 -------------------------------------------------
@@ -137,14 +119,10 @@
     // モバイル設定ボタン → シートを開く
     $mobSettingsBtn.addEventListener('click', openSheet);
 
-    // スコアトグル
-    $scoreToggle.addEventListener('click', toggleScore);
-
     // --- ボトムシート内コントロール ---
     $sheetBpmSlider.addEventListener('input', () => {
       const v = Number($sheetBpmSlider.value);
       $sheetBpmValue.textContent = String(v);
-      // デスクトップ側にも同期
       $bpmSlider.value = v;
       $bpmValue.textContent = String(v);
       $mobBpmVal.textContent = String(v);
@@ -168,7 +146,6 @@
       closeSheet();
     });
 
-    // シートバックドロップ
     $sheetBackdrop.addEventListener('click', closeSheet);
   }
 
@@ -176,14 +153,10 @@
     editPattern = createEmptyPattern();
     currentPattern = editPattern;
     UIGrid.render($gridWrap, currentPattern, { onToggle: onGridToggle });
+    UIScore.refresh(currentPattern, swing);
     applySwing();
-    if (isMobile) {
-      setupMobileUI();
-      resetGridAlignment();
-    } else {
-      UIScore.refresh(currentPattern, swing);
-      requestAlign();
-    }
+    if (isMobile) applyScoreScale();
+    requestAlign();
   }
 
   // --- モバイルコントロール同期 -----------------------------------------
@@ -219,47 +192,21 @@
     }, 300);
   }
 
-  // --- スコアトグル ---------------------------------------------------
-  function toggleScore() {
-    scoreVisible = !scoreVisible;
-    $scorePanel.classList.toggle('show', scoreVisible);
-    $scoreToggle.classList.toggle('active', scoreVisible);
-    $scoreToggle.textContent = scoreVisible ? '♫ 譜面を隠す' : '♫ 譜面';
-    if (scoreVisible) {
-      UIScore.refresh(currentPattern, swing);
-      requestAnimationFrame(() => {
-        applyScoreScale();
-        requestAlign();
-      });
-    } else {
-      resetGridAlignment();
-    }
-  }
-
+  // --- 譜面スケール（モバイル用） ----------------------------------------
   function applyScoreScale() {
     const scoreEl = document.getElementById('score');
     if (!scoreEl) return;
     const svg = scoreEl.querySelector('svg');
     if (!svg) return;
-    const panelWidth = $scorePanel.clientWidth - 16; // padding
-    const svgWidth = svg.getAttribute('width') || svg.viewBox?.baseVal?.width || 560;
-    const scale = Math.min(1, panelWidth / parseFloat(svgWidth));
+    const containerWidth = scoreEl.parentElement.clientWidth;
+    if (containerWidth <= 0) return;
+    const svgWidth = parseFloat(svg.getAttribute('width')) || 560;
+    const svgHeight = parseFloat(svg.getAttribute('height')) || 300;
+    const scale = Math.min(1, containerWidth / svgWidth);
     svg.style.transformOrigin = 'top left';
     svg.style.transform = `scale(${scale})`;
-    // Adjust container height
-    const svgHeight = svg.getAttribute('height') || 300;
-    scoreEl.style.height = `${parseFloat(svgHeight) * scale}px`;
+    scoreEl.style.height = `${svgHeight * scale}px`;
     scoreEl.style.minHeight = 'auto';
-  }
-
-  function resetGridAlignment() {
-    // モバイルでスコア非表示時、グリッドの alignment をリセット
-    const trackCells = $gridWrap.querySelectorAll('.track-cells');
-    trackCells.forEach(cells => {
-      cells.style.marginLeft = '';
-      cells.style.width = '';
-      cells.style.flex = '';
-    });
   }
 
   // --- 再生制御 ------------------------------------------------------
@@ -314,19 +261,26 @@
   }
 
   function alignGridToScore() {
-    // モバイルでスコア非表示時はアラインをスキップ
-    if (isMobile && !scoreVisible) return;
-
     const metrics = UIScore.getAlignMetrics();
     if (!metrics) return;
 
     const scoreEl = document.getElementById('score');
     if (!scoreEl) return;
+
+    // モバイルではスケール後の実寸で計算
+    const svg = scoreEl.querySelector('svg');
+    let scaleF = 1;
+    if (isMobile && svg) {
+      const t = svg.style.transform;
+      const m = t && t.match(/scale\(([\d.]+)\)/);
+      if (m) scaleF = parseFloat(m[1]);
+    }
+
     const scoreRect = scoreEl.getBoundingClientRect();
     if (scoreRect.width === 0) return;
 
-    const firstNoteAbs = scoreRect.left + metrics.firstX;
-    const lastNoteAbs  = scoreRect.left + metrics.lastX;
+    const firstNoteAbs = scoreRect.left + metrics.firstX * scaleF;
+    const lastNoteAbs  = scoreRect.left + metrics.lastX * scaleF;
     const D = lastNoteAbs - firstNoteAbs;
     if (D <= 0) return;
 
