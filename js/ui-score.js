@@ -116,9 +116,8 @@ const UIScore = (() => {
     });
 
     // メロディ音符の X をドラムグリッドに強制アライン
-    const melNoteStartX = melodyStave.getNoteStartX();
-    alignNotesToGrid(g4Result.notes, g4Result.stepIndices, stepXs, melNoteStartX);
-    alignNotesToGrid(c4Result.notes, c4Result.stepIndices, stepXs, melNoteStartX);
+    alignNotesToGrid(g4Result.notes, g4Result.stepIndices, stepXs, melodyStave);
+    alignNotesToGrid(c4Result.notes, c4Result.stepIndices, stepXs, melodyStave);
 
     // メロディ描画（X 補正済み）
     g4Voice.draw(ctx, melodyStave);
@@ -367,12 +366,12 @@ const UIScore = (() => {
   // --- メロディ音符の X をドラムグリッドに揃える --------------------------
   // 各メロディ音符の TickContext X + staveNoteStartX がドラムの stepXs に一致するよう
   // setXShift で補正する。format() 後、draw() 前に呼ぶ。
-  function alignNotesToGrid(notes, stepIndices, drumStepXs, noteStartX) {
+  function alignNotesToGrid(notes, stepIndices, drumStepXs, stave) {
     for (let i = 0; i < notes.length; i++) {
       const targetX = drumStepXs[stepIndices[i]];
       if (!targetX) continue;
-      const tc = notes[i].getTickContext();
-      const currentX = noteStartX + tc.getX();
+      notes[i].setStave(stave);
+      const currentX = notes[i].getAbsoluteX();
       notes[i].setXShift(targetX - currentX);
     }
   }
