@@ -211,32 +211,21 @@ const UIScore = (() => {
   // noteKey: 音符のキー ('b/4' = 線上)
   // restKey: 休符のキー（2声で重ならないよう上下にずらす）
   // stemDir: 1=上, -1=下
+  // メロディもドラムと同じく 16 分音符ベタ描画（16 tickable）。
+  // hold(2) は 16 分音符＋タイで接続。これにより全声部が同数の
+  // tickable を持ち、Formatter が X 位置を完全に揃える。
   function buildMelodyNotes(pattern, track, noteKey, restKey, stemDir, StaveNote, Dot) {
     const arr = pattern[track];
     const notes = [];
     const ties = [];
-    let i = 0;
-    while (i < STEPS) {
+    for (let i = 0; i < STEPS; i++) {
       if (arr && arr[i] === 1) {
-        let len = 1;
-        while (i + len < STEPS && arr[i + len] === 2) len++;
-        const parts = splitNoteBeatAware(i, len);
-        for (let p = 0; p < parts.length; p++) {
-          const idx = notes.length;
-          notes.push(makeMelodyNote(StaveNote, Dot, parts[p].duration, parts[p].dots, false, noteKey, stemDir));
-          if (p < parts.length - 1) {
-            ties.push({ first: idx, last: idx + 1 });
-          }
-        }
-        i += len;
+        notes.push(makeMelodyNote(StaveNote, Dot, '16', 0, false, noteKey, stemDir));
+      } else if (arr && arr[i] === 2) {
+        notes.push(makeMelodyNote(StaveNote, Dot, '16', 0, false, noteKey, stemDir));
+        ties.push({ first: notes.length - 2, last: notes.length - 1 });
       } else {
-        let len = 0;
-        while (i + len < STEPS && (!arr || arr[i + len] !== 1)) len++;
-        if (len === 0) { i++; continue; }
-        for (const d of splitRestBeatAware(i, len)) {
-          notes.push(makeMelodyNote(StaveNote, Dot, d.duration, d.dots, true, restKey, stemDir));
-        }
-        i += len;
+        notes.push(makeMelodyNote(StaveNote, Dot, '16', 0, true, restKey, stemDir));
       }
     }
     return { notes, ties };
