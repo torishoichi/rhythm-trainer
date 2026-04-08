@@ -91,20 +91,36 @@ const UIScore = (() => {
     const c4Voice = new Voice({ numBeats: 4, beatValue: 4 });
     c4Voice.addTickables(c4Result.notes);
 
-    // 全声部を1つのフォーマッタで整形。
-    // ドラム声部（常に16分音符×16）が等間隔グリッドを決定し、
-    // メロディ声部もそのグリッドに揃うため DTM↔譜面の位置が一致する。
+    // --- フォーマット＆描画 ------------------------------------------------
+    // ドラム：独自 Formatter で 16 分等間隔グリッドを確定
     const noteWidth = width - 120;
-    const formatter = new Formatter();
-    formatter.joinVoices([voice1, voice2]);
-    formatter.joinVoices([g4Voice, c4Voice]);
-    formatter.format([voice1, voice2, g4Voice, c4Voice], noteWidth);
+    new Formatter()
+      .joinVoices([voice1, voice2])
+      .format([voice1, voice2], noteWidth);
 
+    // メロディ：独自 Formatter で音価に応じた配置（後で X 補正）
+    new Formatter()
+      .joinVoices([g4Voice, c4Voice])
+      .format([g4Voice, c4Voice], noteWidth);
+
+    // ドラム描画
     voice1.draw(ctx, drumStave);
     voice2.draw(ctx, drumStave);
     drumResult.upperBeams.forEach(b => b.setContext(ctx).draw());
     drumResult.lowerBeams.forEach(b => b.setContext(ctx).draw());
 
+    // --- ステップ X 座標：ドラム上声部の各音符 X を 16 ステップ分取得 -----
+    stepXs = drumResult.upperNotes.map((n) => {
+      try { return n.getAbsoluteX(); }
+      catch (e) { return 0; }
+    });
+
+    // メロディ音符の X をドラムグリッドに強制アライン
+    const melNoteStartX = melodyStave.getNoteStartX();
+    alignNotesToGrid(g4Result.notes, g4Result.stepIndices, stepXs, melNoteStartX);
+    alignNotesToGrid(c4Result.notes, c4Result.stepIndices, stepXs, melNoteStartX);
+
+    // メロディ描画（X 補正済み）
     g4Voice.draw(ctx, melodyStave);
     c4Voice.draw(ctx, melodyStave);
 
@@ -126,12 +142,6 @@ const UIScore = (() => {
         lastIndices: [0],
       }).setContext(ctx).draw();
     }
-
-    // --- ステップ X 座標：ドラム上声部の各音符 X を 16 ステップ分取得 -----
-    stepXs = drumResult.upperNotes.map((n) => {
-      try { return n.getAbsoluteX(); }
-      catch (e) { return 0; }
-    });
 
     staveTopY = drumStaveY;
     staveBottomY = melodyStaveY + 40;
@@ -207,28 +217,45 @@ const UIScore = (() => {
   }
 
   // --- メロディノート構築（C4 / G4 共通） -----------------------------------
-  // 3値配列 (0/1/2) をスキャンして音符・休符を作り、タイ情報も返す。
-  // noteKey: 音符のキー ('b/4' = 線上)
-  // restKey: 休符のキー（2声で重ならないよう上下にずらす）
-  // stemDir: 1=上, -1=下
-  // メロディもドラムと同じく 16 分音符ベタ描画（16 tickable）。
-  // hold(2) は 16 分音符＋タイで接続。これにより全声部が同数の
-  // tickable を持ち、Formatter が X 位置を完全に揃える。
+  // 3値配列 (0/1/2) をスキャンして正しい音価（4分・8分等）で音符・休符を作る。
+  // 各音符の開始ステップ番号 (stepIndices) も返し、描画後に
+  // ドラムグリッドの X 座標へ強制アラインするために使う。
   function buildMelodyNotes(pattern, track, noteKey, restKey, stemDir, StaveNote, Dot) {
     const arr = pattern[track];
     const notes = [];
     const ties = [];
-    for (let i = 0; i < STEPS; i++) {
+    const stepIndices = [];
+    let i = 0;
+    while (i < STEPS) {
       if (arr && arr[i] === 1) {
-        notes.push(makeMelodyNote(StaveNote, Dot, '16', 0, false, noteKey, stemDir));
-      } else if (arr && arr[i] === 2) {
-        notes.push(makeMelodyNote(StaveNote, Dot, '16', 0, false, noteKey, stemDir));
-        ties.push({ first: notes.length - 2, last: notes.length - 1 });
+        let len = 1;
+        while (i + len < STEPS && arr[i + len] === 2) len++;
+        const parts = splitNoteBeatAware(i, len);
+        let consumed = 0;
+        for (let p = 0; p < parts.length; p++) {
+          const idx = notes.length;
+          notes.push(makeMelodyNote(StaveNote, Dot, parts[p].duration, parts[p].dots, false, noteKey, stemDir));
+          stepIndices.push(i + consumed);
+          consumed += parts[p].ticks;
+          if (p < parts.length - 1) {
+            ties.push({ first: idx, last: idx + 1 });
+          }
+        }
+        i += len;
       } else {
-        notes.push(makeMelodyNote(StaveNote, Dot, '16', 0, true, restKey, stemDir));
+        let len = 0;
+        while (i + len < STEPS && (!arr || arr[i + len] !== 1)) len++;
+        if (len === 0) { i++; continue; }
+        let consumed = 0;
+        for (const d of splitRestBeatAware(i, len)) {
+          notes.push(makeMelodyNote(StaveNote, Dot, d.duration, d.dots, true, restKey, stemDir));
+          stepIndices.push(i + consumed);
+          consumed += d.ticks;
+        }
+        i += len;
       }
     }
-    return { notes, ties };
+    return { notes, ties, stepIndices };
   }
 
   function makeMelodyNote(StaveNote, Dot, duration, dots, isRest, key, stemDir) {
@@ -335,6 +362,19 @@ const UIScore = (() => {
       remaining -= chunk;
     }
     return out;
+  }
+
+  // --- メロディ音符の X をドラムグリッドに揃える --------------------------
+  // 各メロディ音符の TickContext X + staveNoteStartX がドラムの stepXs に一致するよう
+  // setXShift で補正する。format() 後、draw() 前に呼ぶ。
+  function alignNotesToGrid(notes, stepIndices, drumStepXs, noteStartX) {
+    for (let i = 0; i < notes.length; i++) {
+      const targetX = drumStepXs[stepIndices[i]];
+      if (!targetX) continue;
+      const tc = notes[i].getTickContext();
+      const currentX = noteStartX + tc.getX();
+      notes[i].setXShift(targetX - currentX);
+    }
   }
 
   // --- 拍区切り線（譜面側） -------------------------------------------
